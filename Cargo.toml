@@ -1,7 +1,5 @@
 [workspace]
 members = [
-    "cli",
-    "js",
     "lib/oxigraph",
     "lib/oxrdf",
     "lib/oxrdfio",
@@ -11,9 +9,7 @@ members = [
     "lib/sparesults",
     "lib/spargebra",
     "lib/sparopt",
-    "lib/sparql-smith",
-    "oxrocksdb-sys",
-    "testsuite"
+    "lib/sparql-smith"
 ]
 resolver = "2"
 

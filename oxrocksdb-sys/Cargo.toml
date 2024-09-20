@@ -24,3 +24,6 @@ libc.workspace = true
 bindgen.workspace = true
 cc = { workspace = true, features = ["parallel"] }
 pkg-config = { workspace = true, optional = true }
+
+[lib]
+crate-type = ["lib", "cdylib"]

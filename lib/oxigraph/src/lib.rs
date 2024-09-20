@@ -25,26 +25,49 @@ use jni::objects::{JClass, JString};
 // lifetime checker won't let us.
 use jni::sys::jstring;
 
-// This keeps Rust from "mangling" the name and making it unique for this
-// crate.
+use crate::store::Store;
+use crate::sparql::results::QueryResultsFormat;
+use crate::io::RdfFormat;
+
+#[allow(clippy::non_ascii_literal)]
+const DATA: &str = r#"
+@prefix schema: <http://schema.org/> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+wd:Q90 a schema:City ;
+    schema:name "Paris"@fr , "la ville lumière"@fr ;
+    schema:country wd:Q142 ;
+    schema:population 2000000 ;
+    schema:startDate "-300"^^xsd:gYear ;
+    schema:url "https://www.paris.fr/"^^xsd:anyURI ;
+    schema:postalCode "75001" .
+"#;
+
 #[no_mangle]
-pub extern "system" fn Java_ai_mlc_mlcchat_MainActivity_hello<'local>(mut env: JNIEnv<'local>,
+pub extern "system" fn Java_ai_mlc_mlcchat_MainActivity_loadData<'local>(mut env: JNIEnv<'local>,
 // This is the class that owns our static method. It's not going to be used,
 // but still must be present to match the expected signature of a static
 // native method.
-                                                     class: JClass<'local>,
+                                                     _class: JClass<'local>,
                                                      input: JString<'local>)
-                                                     -> jstring {
+                                                     -> jstring {                  
+    let store = Store::new().unwrap();
+    let _unused = store.load_from_read(RdfFormat::Turtle, DATA.as_bytes());
+    // let _ = store.validate();
+
     // First, we have to get the string out of Java. Check out the `strings`
     // module for more info on how this works.
-    let input: String =
+    let event_message: String =
         env.get_string(&input).expect("Couldn't get java string!").into();
 
-    // Then we have to create a new Java string to return. Again, more info
-    // in the `strings` module.
-    let output = env.new_string(format!("Hello, {}!", input))
-        .expect("Couldn't create java string!");
+    let mut results = "Answer:".to_owned();
+    let triples = store.query("SELECT * WHERE {{ ?s ?p ?o }}");
+    results.push_str(std::str::from_utf8(
+        &triples.expect("ALL").write(Vec::new(), QueryResultsFormat::Json).expect("VEC")).expect("UTF")
+    );
 
-    // Finally, extract the raw pointer to return.
-    output.into_raw()
+    let ret = env.new_string(format!("Event MSG '{}' --> {}!", event_message, results))
+        .expect("Couldn't create java string!");
+    ret.into_raw()
 }

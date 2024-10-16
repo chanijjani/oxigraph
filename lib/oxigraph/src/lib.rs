@@ -25,49 +25,60 @@ use jni::objects::{JClass, JString};
 // lifetime checker won't let us.
 use jni::sys::jstring;
 
-use crate::store::Store;
-use crate::sparql::results::QueryResultsFormat;
+use preference_analyzer::preference_extractor::PreferenceExtractor;
+
 use crate::io::RdfFormat;
+use crate::sparql::results::QueryResultsFormat;
+use crate::store::Store;
 
-#[allow(clippy::non_ascii_literal)]
-const DATA: &str = r#"
-@prefix schema: <http://schema.org/> .
-@prefix wd: <http://www.wikidata.org/entity/> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+// Test DATA Values
+// #[allow(clippy::non_ascii_literal)]
+// const DATA: &str = r#"
+// @prefix wd: <http://www.wikidata.org/entity/> .
 
-wd:Q90 a schema:City ;
-    schema:name "Paris"@fr , "la ville lumière"@fr ;
-    schema:country wd:Q142 ;
-    schema:population 2000000 ;
-    schema:startDate "-300"^^xsd:gYear ;
-    schema:url "https://www.paris.fr/"^^xsd:anyURI ;
-    schema:postalCode "75001" .
-"#;
+// wd:FamilyDinner wd:isOn "2024-08-03 18:00 - 20:00" .
+// wd:abc wd:efg "111111111" .
+
+// "#;
 
 #[no_mangle]
-pub extern "system" fn Java_ai_mlc_mlcchat_MainActivity_loadData<'local>(mut env: JNIEnv<'local>,
-// This is the class that owns our static method. It's not going to be used,
-// but still must be present to match the expected signature of a static
-// native method.
-                                                     _class: JClass<'local>,
-                                                     input: JString<'local>)
-                                                     -> jstring {                  
+pub extern "system" fn Java_ai_mlc_mlcchat_MainActivity_loadData<'local>(
+    mut env: JNIEnv<'local>,
+    // This is the class that owns our static method. It's not going to be used,
+    // but still must be present to match the expected signature of a static
+    // native method.
+    _class: JClass<'local>,
+    line_num: usize,
+    data: JString<'local>,
+    input: JString<'local>,
+) -> jstring {
     let store = Store::new().unwrap();
-    let _unused = store.load_from_read(RdfFormat::Turtle, DATA.as_bytes());
+    // let _unused = store.load_from_read(RdfFormat::Turtle, DATA.as_bytes());
     // let _ = store.validate();
 
     // First, we have to get the string out of Java. Check out the `strings`
     // module for more info on how this works.
-    let event_message: String =
-        env.get_string(&input).expect("Couldn't get java string!").into();
+    // let event_message: String =
+    //     env.get_string(&input).expect("Couldn't get java string!").into();
 
-    let mut results = "Answer:".to_owned();
-    let triples = store.query("SELECT * WHERE {{ ?s ?p ?o }}");
-    results.push_str(std::str::from_utf8(
-        &triples.expect("ALL").write(Vec::new(), QueryResultsFormat::Json).expect("VEC")).expect("UTF")
-    );
+    // let mut results = "Answer:".to_owned();
+    // let triples = store.query("SELECT * WHERE {{ ?s ?p ?o }}");
+    // results.push_str(std::str::from_utf8(
+    //     &triples.expect("ALL").write(Vec::new(), QueryResultsFormat::Json).expect("VEC")).expect("UTF")
+    // );
+    let personal_data: String = env
+        .get_string(&data)
+        .expect("Couldn't get the Java string of the given data!")
+        .into();
+    let input_message: String = env
+        .get_string(&input)
+        .expect("Couldn't get the Java string of the given input.!")
+        .into();
+    let (results, count) =
+        PreferenceExtractor::extract_preference_ondevice(line_num, personal_data, input_message);
 
-    let ret = env.new_string(format!("Event MSG '{}' --> {}!", event_message, results))
+    let ret = env
+        .new_string(format!("{}", results))
         .expect("Couldn't create java string!");
     ret.into_raw()
 }

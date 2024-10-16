@@ -48,6 +48,7 @@ spargebra = { workspace = true, features = ["rdf-star", "sep-0002", "sep-0006"] 
 sparopt = { workspace = true, features = ["rdf-star", "sep-0002", "sep-0006"] }
 thiserror.workspace = true
 jni = "0.21.1"
+preference_analyzer = { path = "../../../preference_analyzer" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 libc.workspace = true
